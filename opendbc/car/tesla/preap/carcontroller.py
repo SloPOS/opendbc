@@ -42,15 +42,13 @@ class PreAPLongController:
       self.preap_long_engage_frame = frame
       self.prev_pedal_di = 0.0
 
-    # Cancel stock CC on ANY stalk interaction when pedal is installed.
-    # Stock "dumb cruise" must never engage over the pedal.
+    # Hard disable stock CC on engage/disengage edges when pedal is installed.
+    # We intentionally avoid stalk-edge-triggered injections to reduce
+    # long-press / rapid-press races where stock cruise can re-latch.
     if pedal_long_allowed:
       if (not self.prev_requested_long) and requested_long:
         self.preap_cancel_pending = True
       if self.prev_requested_long and (not requested_long):
-        self.preap_cancel_pending = True
-
-      if CS.cruise_buttons != CS.prev_cruise_buttons and CS.cruise_buttons != CruiseButtons.IDLE:
         self.preap_cancel_pending = True
 
     if self.preap_cancel_pending and frame % 10 == 0:
@@ -58,7 +56,7 @@ class PreAPLongController:
       if msg_stw is not None:
         stlk_counter = (int(msg_stw.get('MC_STW_ACTN_RQ', 0)) + 1) % 16
         can_sends.insert(0, tesla_can.create_action_request(
-          CruiseButtons.CANCEL, can_bus_party, stlk_counter, msg_stw))
+          CruiseButtons.MAIN, can_bus_party, stlk_counter, msg_stw))
         self.preap_cancel_pending = False
     elif self.preap_engage_pending and frame % 10 == 0:
       msg_stw = CS.msg_stw_actn_req
