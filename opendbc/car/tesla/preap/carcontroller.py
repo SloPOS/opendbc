@@ -123,6 +123,7 @@ class PreAPLongController:
             # Low-rate wake pulse for unresponsive pedal (avoids flooding dead bus)
             can_sends.append(tesla_can.create_pedal_command(idle_pedal, enable=0))
         self.prev_pedal_di = 0.0
+        CS.pccEvent = None  # Clear max regen event when longitudinal is not active
 
     self.prev_preap_long_active = long_active
     return can_sends
