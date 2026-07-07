@@ -47,6 +47,8 @@ class CarState(CarStateBase):
 
     # Follow distance stalk tracking
     self.prev_stalk_follow = 0
+    # Turn-signal lever tracking (TurnIndLvr_Stat -> blinker ButtonEvents)
+    self.prev_turn_lever = 0
     self.speed_units = "MPH"  # Updated from DI_state each frame
 
     # Pre-AP state (only instantiated for Pre-AP cars)
