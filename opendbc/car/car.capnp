@@ -210,6 +210,10 @@ struct CarState {
   teslaCCEngaged @63 :Bool;     # NAP: rising edge of stock Tesla CC engaging (no-pedal mode)
   teslaCCDisengaged @64 :Bool;  # NAP: falling edge of stock Tesla CC
   teslaCCNotArmed @65 :Bool;    # NAP: lateral engaged but DI_cruiseState != STANDBY/ENABLED
+  # NAP: turn-signal lever position (0=idle, 1=left, 2=right). Driver intent,
+  # independent of the indicator lamp (which latches ON while openpilot drives
+  # the blinker). Level signal, so it survives message conflation.
+  turnSignalStalkState @66 :UInt8;
 
   # cruise state
   cruiseState @10 :CruiseState;

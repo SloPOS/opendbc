@@ -23,29 +23,6 @@ def _current_time_millis():
   return int(round(time.time() * 1000))
 
 
-_ButtonType = structs.CarState.ButtonEvent.Type
-
-
-def turn_lever_button_events(prev_lever, lever):
-  """ButtonEvents for turn-signal lever (TurnIndLvr_Stat) transitions.
-
-  Lever values: 0=IDLE, 1=LEFT, 2=RIGHT, 3=SNA (treated as IDLE). Emits a
-  pressed event when the lever enters LEFT/RIGHT and a released event when it
-  leaves — a driver half-press shows up as pressed followed by released.
-  """
-  prev_lever = 0 if prev_lever == 3 else prev_lever
-  lever = 0 if lever == 3 else lever
-  events = []
-  if lever != prev_lever:
-    for pos, btn_type in ((1, _ButtonType.leftBlinker), (2, _ButtonType.rightBlinker)):
-      if prev_lever == pos or lever == pos:
-        be = structs.CarState.ButtonEvent()
-        be.type = btn_type
-        be.pressed = (lever == pos)
-        events.append(be)
-  return events
-
-
 def update_preap(cs, can_parsers):
   cp_ap_party = can_parsers[Bus.ap_party]
   cp_pt = can_parsers[Bus.pt]
@@ -154,18 +131,18 @@ def update_preap(cs, can_parsers):
     cs.cruise_buttons, cs.prev_cruise_buttons, curr_time_ms,
     ret.vEgo, cs.speed_units, use_pedal, pedal_long_allowed,
     long_control_allowed, real_brake_pressed, cs.di_cruise_state)
-
-  # Turn-signal LEVER -> ButtonEvents for desire_helper tap detection. The
-  # indicator lamp (BC_indicatorLStatus -> ret.leftBlinker) latches ON while
-  # openpilot drives the blinker via DAS_bodyControls, masking driver taps, so
-  # taps to queue/cancel lane changes must be read from the lever itself.
-  turn_lever = int(cp_chassis.vl["STW_ACTN_RQ"]["TurnIndLvr_Stat"])
-  button_events.extend(turn_lever_button_events(cs.prev_turn_lever, turn_lever))
-  cs.prev_turn_lever = turn_lever
-
   # Suppress brakePressed so generic brake-disengage path doesn't kill lateral
   ret.brakePressed = False
   ret.buttonEvents = button_events
+
+  # Turn-signal LEVER position for desire_helper tap detection. The indicator
+  # lamp (BC_indicatorLStatus -> ret.leftBlinker) latches ON while openpilot
+  # drives the blinker via DAS_bodyControls, masking driver taps — so lane-change
+  # queue/cancel taps must be read from the lever itself. Published as a LEVEL
+  # (not ButtonEvents): modeld reads carState conflated at ~20Hz and would drop
+  # single-message edge events, but the lever value persists >=100ms per press.
+  turn_lever = int(cp_chassis.vl["STW_ACTN_RQ"]["TurnIndLvr_Stat"])
+  ret.turnSignalStalkState = 0 if turn_lever == 3 else turn_lever  # 3 = SNA -> idle
 
   can_engage = cs.engagement.check_can_engage(ret.doorOpen, ret.gearShifter, ret.seatbeltUnlatched)
   ret.cruiseState.enabled = cs.engagement.cruiseEnabled and can_engage
